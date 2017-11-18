@@ -111,7 +111,7 @@ function resolve(tpl) {
 
     fnStr += '};\nreturn _r;';
 
-    return new Function('__data', fnStr);
+  return new Function('__data', fnStr);
 }
 
 /**
@@ -197,15 +197,22 @@ SSI.prototype = {
      * @param callback
      */
     resolveIncludes: function(content, options, callback) {
-        var matches, seg, isVirtual, basePath, tpath, subOptions, ssi = this;
+        var matches, seg, isVirtual, basePath, tpath, subOptions, target, ssi = this;
 
         async.whilst( // https://www.npmjs.org/package/async#whilst-test-fn-callback-
             function test() {return !!(matches = includeFileReg.exec(content)); },
             function insertInclude(next) {
-                seg = matches[0];
                 isVirtual = RegExp.$1 == 'virtual';
-                basePath = (isVirtual && options.dirname && RegExp.$3.charAt(0) !== '/')? options.dirname : options.baseDir;
-                tpath = path.join(basePath, RegExp.$3);
+        target = RegExp.$3.replace(
+              /\$(?:\{([^}]+)\}|(\w+))/g,
+              function( _, m1, m2 ) {
+                return options.payload[m1||m2] || ""
+              }
+             );
+
+                seg = matches[0];
+                basePath = (isVirtual && options.dirname && target.charAt(0) !== '/')? options.dirname : options.baseDir;
+                tpath = path.join(basePath, target);
                 fs.lstat(tpath,
                     function(err, stats) {
                         if (err) {
